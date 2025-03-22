@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atrade-app
+  namespace: atrade
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: atrade
+  template:
+    metadata:
+      labels:
+        app: atrade
+    spec:
+      containers:
+      - name: atrade-app
+        image: atrade-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: atrade-config
+        - secretRef:
+            name: atrade-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        volumeMounts:
+        - name: app-data
+          mountPath: /app/data
+        - name: app-logs
+          mountPath: /app/logs
+      volumes:
+      - name: app-data
+        persistentVolumeClaim:
+          claimName: atrade-data-pvc
+      - name: app-logs
+        persistentVolumeClaim:
+          claimName: atrade-logs-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atrade-db
+  namespace: atrade
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: atrade-db
+  template:
+    metadata:
+      labels:
+        app: atrade-db
+    spec:
+      containers:
+      - name: atrade-db
+        image: atrade-db:latest
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - secretRef:
+            name: atrade-secrets
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: atrade-db-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atrade-redis
+  namespace: atrade
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: atrade-redis
+  template:
+    metadata:
+      labels:
+        app: atrade-redis
+    spec:
+      containers:
+      - name: atrade-redis
+        image: redis:6
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: atrade-redis-pvc 

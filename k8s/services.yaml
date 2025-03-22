@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: atrade-app
+  namespace: atrade
+spec:
+  selector:
+    app: atrade
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: atrade-db
+  namespace: atrade
+spec:
+  selector:
+    app: atrade-db
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: atrade-redis
+  namespace: atrade
+spec:
+  selector:
+    app: atrade-redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: redis
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: atrade-ingress
+  namespace: atrade
+spec:
+  selector:
+    app: atrade
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  type: LoadBalancer 

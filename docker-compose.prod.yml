@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    image: atrade-app:latest
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 10s
+    ports:
+      - "8000:8000"
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+    environment:
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/trading_system
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - atrade-network
+
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    image: atrade-db:latest
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=trading_system
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    networks:
+      - atrade-network
+
+  redis:
+    image: redis:6
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    networks:
+      - atrade-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - app
+    networks:
+      - atrade-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  app_data:
+  app_logs:
+
+networks:
+  atrade-network:
+    driver: overlay 

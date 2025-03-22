@@ -5,35 +5,31 @@ services:
     build: .
     ports:
       - "8000:8000"
-    environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=trading_system
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - API_HOST=0.0.0.0
-      - API_PORT=8000
-      - API_DEBUG=false
     volumes:
+      - .:/app
       - ./data:/app/data
       - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/trading_system
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=1
     depends_on:
       - db
-    networks:
-      - trading-network
+      - redis
+    command: python -m atrade.cli start --debug
 
   db:
-    image: postgres:12
+    build:
+      context: .
+      dockerfile: Dockerfile.db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=trading_system
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - trading-network
 
   redis:
     image: redis:6
@@ -41,8 +37,7 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - trading-network
+    command: redis-server --appendonly yes
 
 volumes:
   postgres_data:

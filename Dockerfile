@@ -1,38 +1,33 @@
-# 使用Python 3.8作为基础镜像
+# Use Python 3.8 slim image
 FROM python:3.8-slim
 
-# 设置工作目录
+# Set working directory
 WORKDIR /app
 
-# 安装系统依赖
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制项目文件
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt .
-COPY .env.example .
-COPY main.py .
-COPY database.py .
-COPY config.py .
-COPY components/ ./components/
-COPY data/ ./data/
-COPY docs/ ./docs/
 
-# 安装Python依赖
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 创建非root用户
-RUN useradd -m -u 1000 appuser
-USER appuser
+# Copy application code
+COPY . .
 
-# 设置环境变量
-ENV PYTHONUNBUFFERED=1
+# Create necessary directories
+RUN mkdir -p /app/data /app/logs
+
+# Set environment variables
 ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
-# 暴露端口
+# Expose port
 EXPOSE 8000
 
-# 启动命令
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Run the application
+CMD ["python", "-m", "atrade.cli", "start"] 
