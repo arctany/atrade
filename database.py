@@ -5,13 +5,16 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from config import DATABASE_CONFIG
+from atrade.config.settings import load_config
 
 # 设置日志
 logger = logging.getLogger(__name__)
 
+# 加载配置
+config = load_config()
+
 # 创建数据库引擎
-DATABASE_URL = f"postgresql://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['database']}"
+DATABASE_URL = f"postgresql://{config.database.user}:{config.database.password}@{config.database.host}:{config.database.port}/{config.database.name}"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -54,7 +57,7 @@ class Trade(Base):
     price = Column(Float)
     timestamp = Column(DateTime, index=True)
     strategy = Column(String)
-    metadata = Column(JSON)
+    trade_metadata = Column(JSON)
 
 class PerformanceMetrics(Base):
     """性能指标模型"""
@@ -68,7 +71,7 @@ class PerformanceMetrics(Base):
     max_drawdown = Column(Float)
     win_rate = Column(Float)
     profit_factor = Column(Float)
-    metadata = Column(JSON)
+    performance_metadata = Column(JSON)
 
 class RiskMetrics(Base):
     """风险指标模型"""
@@ -80,7 +83,7 @@ class RiskMetrics(Base):
     volatility = Column(Float)
     beta = Column(Float)
     correlation = Column(Float)
-    metadata = Column(JSON)
+    risk_metadata = Column(JSON)
 
 class Database:
     """数据库管理类"""

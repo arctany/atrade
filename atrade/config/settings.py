@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 import yaml
-from pydantic import BaseSettings
+from pydantic import BaseModel
+from pydantic_settings import BaseSettings
 
 class DatabaseSettings(BaseSettings):
     host: str = "localhost"
