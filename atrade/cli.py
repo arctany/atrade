@@ -1,105 +1,139 @@
-import click
+#!/usr/bin/env python
+"""Command-line interface for the trading system."""
 import logging
+import click
 from pathlib import Path
-from typing import Optional
 
 from atrade.core.agent import TradingAgent
-from atrade.config.settings import load_config
-from atrade.utils.logger import setup_logger
+from atrade.config.settings import load_config, get_default_config_path
 
 @click.group()
 def cli():
-    """Atrade - Intelligent Trading System"""
+    """ATrade: Algorithmic Trading System."""
     pass
 
 @cli.command()
-@click.option('--config', '-c', type=click.Path(exists=True),
-              help='Path to configuration file')
-@click.option('--log-level', '-l', default='INFO',
-              type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']),
-              help='Logging level')
-def start(config: Optional[str], log_level: str):
-    """Start the trading system"""
-    # Setup logging
-    setup_logger(log_level)
+@click.option(
+    '--config-file', '-c',
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help='Path to configuration file.'
+)
+@click.option(
+    '--log-level', '-l',
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']),
+    default='INFO',
+    help='Set the logging level.'
+)
+def start(config_file, log_level):
+    """Start the trading agent."""
+    setup_logging(log_level)
+    
+    if not config_file:
+        config_file = get_default_config_path()
+    
+    config = load_config(config_file)
+    agent = TradingAgent(config)
+    agent.start()
+
+@cli.command()
+@click.option(
+    '--config-file', '-c',
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help='Path to configuration file.'
+)
+@click.option(
+    '--log-level', '-l',
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']),
+    default='INFO',
+    help='Set the logging level.'
+)
+@click.option(
+    '--host', '-h',
+    default='0.0.0.0',
+    help='Host to bind the web server to.'
+)
+@click.option(
+    '--port', '-p',
+    default=8000,
+    type=int,
+    help='Port to bind the web server to.'
+)
+def web(config_file, log_level, host, port):
+    """Start the web interface."""
+    setup_logging(log_level)
+    
     logger = logging.getLogger(__name__)
+    logger.info(f"Starting web interface on {host}:{port}")
+    
+    if not config_file:
+        config_file = get_default_config_path()
+        logger.info(f"Using default config file: {config_file}")
+    else:
+        logger.info(f"Using config file: {config_file}")
     
     try:
-        # Load configuration
-        config_path = Path(config) if config else None
-        settings = load_config(config_path)
-        
-        # Initialize trading agent
-        agent = TradingAgent(settings)
-        
-        # Start trading
-        agent.start()
-        
+        config = load_config(config_file)
+        from atrade.api.server import start_server
+        logger.info("Web server starting...")
+        start_server(host=host, port=port)
     except Exception as e:
-        logger.error(f"Failed to start trading system: {str(e)}")
+        logger.error(f"Failed to start web server: {str(e)}")
         raise click.Abort()
 
 @cli.command()
-@click.option('--config', '-c', type=click.Path(exists=True),
-              help='Path to configuration file')
-@click.option('--output', '-o', type=click.Path(),
-              help='Output directory for backtest results')
-def backtest(config: Optional[str], output: Optional[str]):
-    """Run backtest simulation"""
-    # Setup logging
-    setup_logger('INFO')
-    logger = logging.getLogger(__name__)
+@click.option(
+    '--config-file', '-c',
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help='Path to configuration file.'
+)
+@click.option(
+    '--log-level', '-l',
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']),
+    default='INFO',
+    help='Set the logging level.'
+)
+def backtest(config_file, log_level):
+    """Run backtesting of trading strategies."""
+    setup_logging(log_level)
     
-    try:
-        # Load configuration
-        config_path = Path(config) if config else None
-        settings = load_config(config_path)
-        
-        # Initialize backtest
-        from atrade.core.backtest import Backtest
-        backtest = Backtest(settings)
-        
-        # Run backtest
-        results = backtest.run()
-        
-        # Save results
-        if output:
-            output_path = Path(output)
-            backtest.save_results(results, output_path)
-            logger.info(f"Backtest results saved to {output_path}")
-        
-    except Exception as e:
-        logger.error(f"Backtest failed: {str(e)}")
-        raise click.Abort()
+    if not config_file:
+        config_file = get_default_config_path()
+    
+    config = load_config(config_file)
+    click.echo("Backtesting not implemented yet.")
 
 @cli.command()
-@click.option('--config', '-c', type=click.Path(exists=True),
-              help='Path to configuration file')
-def optimize(config: Optional[str]):
-    """Optimize strategy parameters"""
-    # Setup logging
-    setup_logger('INFO')
-    logger = logging.getLogger(__name__)
+@click.option(
+    '--config-file', '-c',
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help='Path to configuration file.'
+)
+@click.option(
+    '--log-level', '-l',
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']),
+    default='INFO',
+    help='Set the logging level.'
+)
+def optimize(config_file, log_level):
+    """Optimize trading strategy parameters."""
+    setup_logging(log_level)
     
-    try:
-        # Load configuration
-        config_path = Path(config) if config else None
-        settings = load_config(config_path)
-        
-        # Initialize optimizer
-        from atrade.core.optimizer import StrategyOptimizer
-        optimizer = StrategyOptimizer(settings)
-        
-        # Run optimization
-        results = optimizer.optimize()
-        
-        # Save results
-        optimizer.save_results(results)
-        logger.info("Strategy optimization completed")
-        
-    except Exception as e:
-        logger.error(f"Strategy optimization failed: {str(e)}")
-        raise click.Abort()
+    if not config_file:
+        config_file = get_default_config_path()
+    
+    config = load_config(config_file)
+    click.echo("Optimization not implemented yet.")
+
+def setup_logging(log_level):
+    """Set up logging configuration."""
+    numeric_level = getattr(logging, log_level.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError(f'Invalid log level: {log_level}')
+    
+    logging.basicConfig(
+        level=numeric_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    )
 
 if __name__ == '__main__':
     cli() 
